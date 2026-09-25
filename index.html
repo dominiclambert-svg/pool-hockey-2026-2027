@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Pool Draft">
 <meta name="theme-color" content="#102A43">
 <meta name="format-detection" content="telephone=no">
-<title>Pool Hockey 2026-2027 — Draft Assistant V1.3 — Pool Pro</title>
+<title>Pool Hockey 2026-2027 — Draft Assistant V1.5 — ESPN + PuckCast</title>
 <style>
 :root{
   --navy:#102A43; --blue:#1F5A94; --blue2:#3178B8; --ice:#F5F9FD; --line:#D7E2EC;
@@ -107,7 +107,7 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .wrap{padding:10px}
   .tabs{display:none}
   .bottomNav{
-    display:grid;grid-template-columns:repeat(4,1fr);
+    display:grid;grid-template-columns:repeat(5,1fr);
     position:fixed;left:0;right:0;bottom:0;z-index:50;
     background:rgba(255,255,255,.97);backdrop-filter:blur(10px);
     border-top:1px solid var(--line);
@@ -144,12 +144,38 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .quickSearchWrap{top:73px}
 }
 
+
+.teamGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.recommendGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.teamCard{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px;box-shadow:var(--shadow)}
+.teamCard.chosen{opacity:.62;background:#F2F4F6}
+.teamCard.mine{border:2px solid #2E7D54;background:#EAF7EF;opacity:1}
+.teamCard.best{border:2px solid var(--blue);background:#F4F9FD}
+.teamName{font-size:15px;font-weight:900;color:var(--navy)}
+.teamRank{font-size:11px;font-weight:800;color:var(--muted)}
+.teamPts{font-size:27px;font-weight:900;color:var(--navy);line-height:1}
+.teamMetricGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+.teamTargetExcellent{background:#DFF2E7;color:#1E6845}
+.teamTargetGood{background:#FFF2CC;color:#725A00}
+.teamTargetRisk{background:#FCE1C8;color:#8A4B08}
+.teamTargetOut{background:#F1F3F5;color:#66788A}
+.teamRecommendHeader{display:flex;justify-content:space-between;align-items:center}
+@media(max-width:900px){.teamGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){
+  .teamGrid,.recommendGrid{grid-template-columns:1fr}
+  .teamCard{padding:11px}
+  .teamPts{font-size:24px}
+  #teams .row.between{align-items:flex-start}
+  #teams .row.between > .row{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  #myTurnBtn{grid-column:1 / -1}
+}
+
 </style>
 </head>
 <body>
 <header>
   <div style="max-width:1280px;margin:auto">
-    <h1>🏒 Pool Hockey 2026-2027 — Draft Assistant V1.3 — Pool Pro</h1>
+    <h1>🏒 Pool Hockey 2026-2027 — Draft Assistant V1.5 — ESPN + PuckCast</h1>
     <div class="sub">Snake • 8 attaquants • 4 défenseurs • 2 gardiens • pointage personnalisé • <b>Projections Pool Pro</b></div>
   </div>
 </header>
@@ -157,6 +183,7 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 <div class="wrap">
   <div class="tabs">
     <button class="tab active" data-tab="dash">Tableau de bord</button>
+    <button class="tab" data-tab="teams">Équipes</button>
     <button class="tab" data-tab="draft">Repêchage</button>
     <button class="tab" data-tab="players">Joueurs</button>
     <button class="tab" data-tab="settings">Paramètres</button>
@@ -234,6 +261,62 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     </div>
   </section>
 
+
+  <section id="teams" class="panel">
+    <div class="card">
+      <div class="row between">
+        <div>
+          <h2>🏆 Choix de l’équipe NHL</h2>
+          <div class="small muted">Classement officiel du pool : ESPN • valeur projetée : points PuckCast • cible stratégique : rang joueurs #5 à #7.</div>
+        </div>
+        <div class="row">
+          <button class="btn" id="myTurnBtn" onclick="activateMyTeamTurn()">⭐ MON TOUR</button>
+          <button class="btn secondary" onclick="undoTeamPick()">↶ Annuler</button>
+          <button class="btn warn" onclick="resetTeamDraft()">Réinitialiser</button>
+        </div>
+      </div>
+
+      <div id="teamStatus" class="note" style="margin-top:12px"></div>
+
+      <div id="teamRecommendationsWrap" style="display:none;margin-top:14px">
+        <div class="teamRecommendHeader">
+          <div>
+            <h2 style="margin:0">Mes meilleures options maintenant</h2>
+            <div class="small muted">L’app calcule ton futur rang avec ESPN seulement, puis privilégie les points PuckCast parmi les options qui visent #5-#7.</div>
+          </div>
+        </div>
+        <div id="teamRecommendations" class="teamGrid recommendGrid" style="margin-top:10px"></div>
+        
+        <div class="note" style="margin-top:10px">
+          <b>Écart ESPN / rang selon pts PuckCast :</b> un nombre positif est intéressant dans votre format.
+          Exemple : ESPN #17 et rang selon points PuckCast #12 = <b>+8 favorable</b> : l’équipe rapporte des points comme une équipe plus forte
+          que ce que son rang officiel ESPN laisse croire, ce qui peut améliorer ton rang de joueurs.
+        </div>
+
+        <div class="note" style="margin-top:10px">
+          <b>Rang estimé</b> = scénario où les participants après toi prennent les équipes encore disponibles ayant le plus de points PuckCast; le rang lui-même est calculé selon ESPN.
+          <b>Plage possible</b> = meilleur/pire rang mathématiquement encore possible selon les choix futurs.
+          Ce sont des aides stratégiques, pas une prédiction du comportement des autres participants.
+        </div>
+      </div>
+
+      <div class="row" style="margin:14px 0 10px">
+        <input id="teamSearch" class="search" placeholder="🔎 Rechercher une équipe...">
+        <select id="teamStatusFilter">
+          <option value="available">Équipes disponibles</option>
+          <option value="all">Toutes les équipes</option>
+          <option value="chosen">Déjà choisies</option>
+        </select>
+      </div>
+
+      <div id="teamGrid" class="teamGrid"></div>
+
+      <div class="note" style="margin-top:14px">
+        <b>Règle officielle :</b> le rang qui détermine l’ordre de repêchage des joueurs provient du Power Ranking ESPN « Way-too-early » publié le 14 juin 2026 et fourni pour le pool. <b>Valeur de l’équipe :</b> PuckCast fournit les points projetés 2026-27. L’application ne mélange pas les deux : ESPN détermine le rang; PuckCast sert à choisir l’équipe la plus payante à rang comparable.
+      </div>
+    </div>
+  </section>
+
   <section id="draft" class="panel">
     <div class="card">
       <div class="row between">
@@ -280,7 +363,7 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 </div>
       <div class="settings">
         <div class="setting"><label>Participants</label><input type="number" id="participants" min="2" max="20"></div>
-        <div class="setting"><label>Mon rang / slot</label><input type="number" id="mySlot" min="1" max="20"></div>
+        <div class="setting"><label>Mon rang joueurs / slot</label><input type="number" id="mySlot" min="1" max="20"></div>
         <div class="setting"><label>Rondes joueurs</label><input type="number" id="rounds" min="1" max="25"></div>
         <div class="setting"><label>Attaquants requis</label><input type="number" id="needA" min="0" max="20"></div>
         <div class="setting"><label>Défenseurs requis</label><input type="number" id="needD" min="0" max="20"></div>
@@ -310,20 +393,25 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
   <div class="footer">
     Source principale : fiche de repêchage POOL PRO 2026-2027 fournie par l’utilisateur. La base intégrée contient les 120 premiers attaquants, 70 premiers défenseurs et 50 gardiens de la fiche. Pour les gardiens seulement, l’estimation du nombre de défaites servant à approximer les défaites en prolongation/fusillade conserve la donnée CBS quand elle était disponible.<br>
-    POOL PRO : projections de la fiche papier fournie &nbsp; • &nbsp; CBS : utilisé uniquement comme donnée auxiliaire pour estimer les défaites de gardiens lorsque disponible
+    POOL PRO : projections joueurs de la fiche papier fournie &nbsp; • &nbsp; ESPN : classement officiel 1-32 du pool · PuckCast : points projetés 2026-27 &nbsp; • &nbsp; CBS : donnée auxiliaire gardiens
   </div>
 </div>
 
 <script>
 const BASE_PLAYERS = [{"id":1,"name":"Connor McDavid","pos":"A","team":"EDM","g":52,"a":88,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":1},{"id":2,"name":"Nikita Kucherov","pos":"A","team":"TBL","g":42,"a":86,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":2},{"id":3,"name":"Leon Draisaitl","pos":"A","team":"EDM","g":50,"a":76,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":3},{"id":4,"name":"Nathan MacKinnon","pos":"A","team":"COL","g":50,"a":73,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":4},{"id":5,"name":"Macklin Celebrini","pos":"A","team":"SJS","g":43,"a":80,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":5},{"id":6,"name":"Kirill Kaprizov","pos":"A","team":"MIN","g":48,"a":62,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":6},{"id":7,"name":"Jack Eichel","pos":"A","team":"VGK","g":33,"a":75,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":7},{"id":8,"name":"Mikko Rantanen","pos":"A","team":"DAL","g":46,"a":58,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":8},{"id":9,"name":"Nick Suzuki","pos":"A","team":"MTL","g":30,"a":74,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":9},{"id":10,"name":"Mitch Marner","pos":"A","team":"VGK","g":29,"a":73,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":10},{"id":11,"name":"David Pastrnak","pos":"A","team":"BOS","g":35,"a":66,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":11},{"id":12,"name":"Mark Scheifele","pos":"A","team":"WPG","g":38,"a":59,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":12},{"id":13,"name":"Clayton Keller","pos":"A","team":"UTA","g":33,"a":62,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":13},{"id":14,"name":"Kyle Connor","pos":"A","team":"WPG","g":40,"a":54,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":14},{"id":15,"name":"Martin Necas","pos":"A","team":"COL","g":32,"a":61,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":15},{"id":16,"name":"William Nylander","pos":"A","team":"TOR","g":42,"a":50,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":16},{"id":17,"name":"Artemi Panarin","pos":"A","team":"LAK","g":34,"a":58,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":17},{"id":18,"name":"Matt Boldy","pos":"A","team":"MIN","g":47,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":18},{"id":19,"name":"Jason Robertson","pos":"A","team":"DAL","g":40,"a":51,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":19},{"id":20,"name":"Auston Matthews","pos":"A","team":"TOR","g":39,"a":51,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":20},{"id":21,"name":"Wyatt Johnston","pos":"A","team":"DAL","g":38,"a":52,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":21},{"id":22,"name":"Jack Hughes","pos":"A","team":"NJD","g":35,"a":52,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":22},{"id":23,"name":"Jake Guentzel","pos":"A","team":"TBL","g":40,"a":46,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":23},{"id":24,"name":"Sam Reinhart","pos":"A","team":"FLA","g":41,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":24},{"id":25,"name":"Sidney Crosby","pos":"A","team":"PIT","g":30,"a":55,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":25},{"id":26,"name":"Jesper Bratt","pos":"A","team":"NJD","g":25,"a":60,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":26},{"id":27,"name":"Tage Thompson","pos":"A","team":"BUF","g":42,"a":42,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":27},{"id":28,"name":"Sebastian Aho","pos":"A","team":"CAR","g":30,"a":54,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":28},{"id":29,"name":"Cole Caufield","pos":"A","team":"MTL","g":44,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":29},{"id":30,"name":"Matthew Tkachuk","pos":"A","team":"FLA","g":36,"a":46,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":30},{"id":31,"name":"Leo Carlsson","pos":"A","team":"ANA","g":34,"a":47,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":31},{"id":32,"name":"Dylan Guenther","pos":"A","team":"UTA","g":43,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":32},{"id":33,"name":"Brandon Hagel","pos":"A","team":"TBL","g":38,"a":42,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":33},{"id":34,"name":"Robert Thomas","pos":"A","team":"STL","g":32,"a":48,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":34},{"id":35,"name":"Tim Stutzle","pos":"A","team":"OTT","g":31,"a":48,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":35},{"id":36,"name":"Filip Forsberg","pos":"A","team":"NSH","g":42,"a":36,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":36},{"id":37,"name":"Brayden Point","pos":"A","team":"TBL","g":30,"a":48,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":37},{"id":38,"name":"Logan Cooley","pos":"A","team":"UTA","g":28,"a":50,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":38},{"id":39,"name":"Zach Hyman","pos":"A","team":"EDM","g":34,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":39},{"id":40,"name":"Nikolaj Ehlers","pos":"A","team":"CAR","g":27,"a":50,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":40},{"id":41,"name":"Aleksander Barkov","pos":"A","team":"FLA","g":23,"a":54,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":41},{"id":42,"name":"Brady Tkachuk","pos":"A","team":"FLA","g":34,"a":42,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":42},{"id":43,"name":"Gabriel Vilardi","pos":"A","team":"WPG","g":32,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":43},{"id":44,"name":"Adrian Kempe","pos":"A","team":"LAK","g":37,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":44},{"id":45,"name":"Will Smith","pos":"A","team":"SJS","g":29,"a":46,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":45},{"id":46,"name":"Lucas Raymond","pos":"A","team":"DET","g":26,"a":49,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":46},{"id":47,"name":"Mark Stone","pos":"A","team":"VGK","g":26,"a":49,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":47},{"id":48,"name":"Mathew Barzal","pos":"A","team":"NYI","g":21,"a":54,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":48},{"id":49,"name":"Mika Zibanejad","pos":"A","team":"NYR","g":31,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":49},{"id":50,"name":"Kirill Marchenko","pos":"A","team":"CBJ","g":31,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":50},{"id":51,"name":"Dylan Strome","pos":"A","team":"WSH","g":23,"a":51,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":51},{"id":52,"name":"Alex Tuch","pos":"A","team":"WSH","g":36,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":52},{"id":53,"name":"Kevin Fiala","pos":"A","team":"LAK","g":32,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":53},{"id":54,"name":"Nico Hischier","pos":"A","team":"NJD","g":31,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":54},{"id":55,"name":"Nick Schmaltz","pos":"A","team":"UTA","g":30,"a":42,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":55},{"id":56,"name":"Cutter Gauthier","pos":"A","team":"ANA","g":40,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":56},{"id":57,"name":"Andrei Svechnikov","pos":"A","team":"CAR","g":30,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":57},{"id":58,"name":"Trevor Zegras","pos":"A","team":"PHI","g":27,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":58},{"id":59,"name":"Dylan Larkin","pos":"A","team":"DET","g":33,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":59},{"id":60,"name":"Travis Konecny","pos":"A","team":"PHI","g":28,"a":42,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":60},{"id":61,"name":"Juraj Slafkovsky","pos":"A","team":"MTL","g":27,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":61},{"id":62,"name":"Jordan Kyrou","pos":"A","team":"WSH","g":35,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":62},{"id":63,"name":"Alex DeBrincat","pos":"A","team":"DET","g":34,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":63},{"id":64,"name":"Connor Bedard","pos":"A","team":"CHI","g":29,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":64},{"id":65,"name":"Roope Hintz","pos":"A","team":"DAL","g":29,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":65},{"id":66,"name":"John Tavares","pos":"A","team":"TOR","g":28,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":66},{"id":67,"name":"Ivan Demidov","pos":"A","team":"MTL","g":22,"a":47,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":67},{"id":68,"name":"Drake Batherson","pos":"A","team":"OTT","g":31,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":68},{"id":69,"name":"Dylan Holloway","pos":"A","team":"STL","g":28,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":69},{"id":70,"name":"Matthew Knies","pos":"A","team":"TOR","g":24,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":70},{"id":71,"name":"Bryan Rust","pos":"A","team":"PIT","g":32,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":71},{"id":72,"name":"Ivan Barbashev","pos":"A","team":"VGK","g":27,"a":39,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":72},{"id":73,"name":"Jackson Blake","pos":"A","team":"CAR","g":26,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":73},{"id":74,"name":"Beckett Sennecke","pos":"A","team":"ANA","g":25,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":74},{"id":75,"name":"Adam Fantilli","pos":"A","team":"CBJ","g":35,"a":30,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":75},{"id":76,"name":"Brock Nelson","pos":"A","team":"COL","g":30,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":76},{"id":77,"name":"Ryan O'Reilly","pos":"A","team":"NSH","g":22,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":77},{"id":78,"name":"Bo Horvat","pos":"A","team":"NYI","g":32,"a":32,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":78},{"id":79,"name":"Jared McCann","pos":"A","team":"SEA","g":24,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":79},{"id":80,"name":"Tyler Bertuzzi","pos":"A","team":"CHI","g":26,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":80},{"id":81,"name":"Matt Duchene","pos":"A","team":"DAL","g":24,"a":39,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":81},{"id":82,"name":"J.J. Peterka","pos":"A","team":"BOS","g":26,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":82},{"id":83,"name":"Vincent Trocheck","pos":"A","team":"UTA","g":22,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":83},{"id":84,"name":"Ryan Nugent-Hopkins","pos":"A","team":"EDM","g":21,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":84},{"id":85,"name":"Pavel Dorofeyev","pos":"A","team":"NYR","g":32,"a":29,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":85},{"id":86,"name":"Tyson Foerster","pos":"A","team":"PHI","g":30,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":86},{"id":87,"name":"Jimmy Snuggerud","pos":"A","team":"STL","g":23,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":87},{"id":88,"name":"Porter Martone","pos":"A","team":"PHI","g":23,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":88},{"id":89,"name":"Zach Benson","pos":"A","team":"BUF","g":20,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":89},{"id":90,"name":"Mats Zuccarello","pos":"A","team":"LAK","g":14,"a":47,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":90},{"id":91,"name":"Tomas Hertl","pos":"A","team":"VGK","g":25,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":91},{"id":92,"name":"Alexis Lafreniere","pos":"A","team":"NYR","g":24,"a":36,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":92},{"id":93,"name":"Pierre-Luc Dubois","pos":"A","team":"WSH","g":22,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":93},{"id":94,"name":"Anthony Cirelli","pos":"A","team":"TBL","g":22,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":94},{"id":95,"name":"J.T. Miller","pos":"A","team":"NYR","g":21,"a":39,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":95},{"id":96,"name":"Evgeni Malkin","pos":"A","team":"PIT","g":20,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":96},{"id":97,"name":"William Eklund","pos":"A","team":"OTT","g":19,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":97},{"id":98,"name":"Rickard Rakell","pos":"A","team":"PIT","g":27,"a":32,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":98},{"id":99,"name":"Pavel Zacha","pos":"A","team":"BOS","g":24,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":99},{"id":100,"name":"Seth Jarvis","pos":"A","team":"CAR","g":21,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":100},{"id":101,"name":"Frank Nazar","pos":"A","team":"CHI","g":18,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":101},{"id":102,"name":"Steven Stamkos","pos":"A","team":"NSH","g":34,"a":24,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":102},{"id":103,"name":"Quinton Byfield","pos":"A","team":"LAK","g":25,"a":33,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":103},{"id":104,"name":"Joel Eriksson Ek","pos":"A","team":"MIN","g":21,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":104},{"id":105,"name":"Elias Pettersson","pos":"A","team":"VAN","g":18,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":105},{"id":106,"name":"Luke Evangelista","pos":"A","team":"NSH","g":15,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":106},{"id":107,"name":"Dylan Cozens","pos":"A","team":"OTT","g":24,"a":33,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":107},{"id":108,"name":"Egor Chinakhov","pos":"A","team":"PIT","g":24,"a":33,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":108},{"id":109,"name":"Matty Beniers","pos":"A","team":"SEA","g":23,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":109},{"id":110,"name":"Alex Ovechkin","pos":"A","team":"WSH","g":30,"a":26,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":110},{"id":111,"name":"Logan Stankoven","pos":"A","team":"CAR","g":30,"a":26,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":111},{"id":112,"name":"Mikael Granlund","pos":"A","team":"ANA","g":22,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":112},{"id":113,"name":"Valeri Nichushkin","pos":"A","team":"CBJ","g":21,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":113},{"id":114,"name":"Josh Doan","pos":"A","team":"BUF","g":27,"a":28,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":114},{"id":115,"name":"Sam Bennett","pos":"A","team":"FLA","g":25,"a":30,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":115},{"id":116,"name":"Mason McTavish","pos":"A","team":"STL","g":24,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":116},{"id":117,"name":"Matvei Michkov","pos":"A","team":"PHI","g":23,"a":32,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":117},{"id":118,"name":"Tom Wilson","pos":"A","team":"WSH","g":27,"a":27,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":118},{"id":119,"name":"Anthony Mantha","pos":"A","team":"NJD","g":26,"a":28,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":119},{"id":120,"name":"Jordan Eberle","pos":"A","team":"SEA","g":22,"a":32,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":120},{"id":121,"name":"Cale Makar","pos":"D","team":"COL","g":24,"a":67,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":1},{"id":122,"name":"Quinn Hughes","pos":"D","team":"MIN","g":15,"a":75,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":2},{"id":123,"name":"Evan Bouchard","pos":"D","team":"EDM","g":16,"a":72,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":3},{"id":124,"name":"Zach Werenski","pos":"D","team":"CBJ","g":24,"a":63,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":4},{"id":125,"name":"Lane Hutson","pos":"D","team":"MTL","g":10,"a":75,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":5},{"id":126,"name":"Rasmus Dahlin","pos":"D","team":"BUF","g":22,"a":60,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":6},{"id":127,"name":"Miro Heiskanen","pos":"D","team":"DAL","g":11,"a":64,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":7},{"id":128,"name":"Charlie McAvoy","pos":"D","team":"BOS","g":13,"a":55,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":8},{"id":129,"name":"Matthew Schaefer","pos":"D","team":"NYI","g":22,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":9},{"id":130,"name":"Adam Fox","pos":"D","team":"NYR","g":11,"a":55,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":10},{"id":131,"name":"Jackson LaCombe","pos":"D","team":"ANA","g":12,"a":53,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":11},{"id":132,"name":"Jake Sanderson","pos":"D","team":"OTT","g":14,"a":50,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":12},{"id":133,"name":"Mikhail Sergachev","pos":"D","team":"UTA","g":11,"a":52,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":13},{"id":134,"name":"Jakob Chychrun","pos":"D","team":"WSH","g":22,"a":40,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":14},{"id":135,"name":"Erik Karlsson","pos":"D","team":"PIT","g":13,"a":49,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":15},{"id":136,"name":"John Carlson","pos":"D","team":"TBL","g":10,"a":52,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":16},{"id":137,"name":"Brock Faber","pos":"D","team":"MIN","g":12,"a":49,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":17},{"id":138,"name":"Roman Josi","pos":"D","team":"NSH","g":15,"a":45,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":18},{"id":139,"name":"Moritz Seider","pos":"D","team":"DET","g":12,"a":48,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":19},{"id":140,"name":"Darren Raddysh","pos":"D","team":"TOR","g":14,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":20},{"id":141,"name":"Josh Morrissey","pos":"D","team":"WPG","g":12,"a":45,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":21},{"id":142,"name":"Bowen Byram","pos":"D","team":"CHI","g":12,"a":44,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":22},{"id":143,"name":"Shayne Gostisbehere","pos":"D","team":"CAR","g":12,"a":43,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":23},{"id":144,"name":"Seth Jones","pos":"D","team":"FLA","g":9,"a":42,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":24},{"id":145,"name":"Victor Hedman","pos":"D","team":"TBL","g":9,"a":41,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":25},{"id":146,"name":"Noah Dobson","pos":"D","team":"MTL","g":12,"a":37,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":26},{"id":147,"name":"Shea Theodore","pos":"D","team":"VGK","g":10,"a":38,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":27},{"id":148,"name":"Brandt Clarke","pos":"D","team":"LAK","g":9,"a":39,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":28},{"id":149,"name":"Vince Dunn","pos":"D","team":"SEA","g":11,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":29},{"id":150,"name":"Dougie Hamilton","pos":"D","team":"NJD","g":13,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":30},{"id":151,"name":"Thomas Harley","pos":"D","team":"DAL","g":11,"a":33,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":31},{"id":152,"name":"K'Andre Miller","pos":"D","team":"CAR","g":9,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":32},{"id":153,"name":"Thomas Chabot","pos":"D","team":"OTT","g":8,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":33},{"id":154,"name":"Brandon Montour","pos":"D","team":"SEA","g":15,"a":27,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":34},{"id":155,"name":"Luke Hughes","pos":"D","team":"NJD","g":8,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":35},{"id":156,"name":"Rasmus Andersson","pos":"D","team":"VGK","g":12,"a":29,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":36},{"id":157,"name":"Sam Malinski","pos":"D","team":"COL","g":7,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":37},{"id":158,"name":"Mattias Samuelsson","pos":"D","team":"BUF","g":11,"a":29,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":38},{"id":159,"name":"Travis Sanheim","pos":"D","team":"PHI","g":9,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":39},{"id":160,"name":"Philip Broberg","pos":"D","team":"STL","g":8,"a":32,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":40},{"id":161,"name":"Cole Hutson","pos":"D","team":"WSH","g":8,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":41},{"id":162,"name":"Mike Matheson","pos":"D","team":"MTL","g":7,"a":32,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":42},{"id":163,"name":"Dmitry Orlov","pos":"D","team":"SJS","g":4,"a":35,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":43},{"id":164,"name":"Noah Hanifin","pos":"D","team":"VGK","g":7,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":44},{"id":165,"name":"Tony DeAngelo","pos":"D","team":"NYI","g":5,"a":33,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":45},{"id":166,"name":"Filip Hronek","pos":"D","team":"VAN","g":4,"a":34,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":46},{"id":167,"name":"Devon Toews","pos":"D","team":"COL","g":7,"a":30,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":47},{"id":168,"name":"Mattias Ekholm","pos":"D","team":"EDM","g":7,"a":30,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":48},{"id":169,"name":"Oliver Ekman-Larsson","pos":"D","team":"TOR","g":6,"a":31,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":49},{"id":170,"name":"Denton Mateychuk","pos":"D","team":"CBJ","g":10,"a":26,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":50},{"id":171,"name":"Zayne Parekh","pos":"D","team":"CGY","g":8,"a":28,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":51},{"id":172,"name":"Kris Letang","pos":"D","team":"PIT","g":7,"a":29,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":52},{"id":173,"name":"Alexander Nikishin","pos":"D","team":"CAR","g":12,"a":23,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":53},{"id":174,"name":"Jamie Drysdale","pos":"D","team":"PHI","g":8,"a":27,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":54},{"id":175,"name":"Gustav Forsling","pos":"D","team":"FLA","g":8,"a":27,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":55},{"id":176,"name":"Owen Power","pos":"D","team":"BUF","g":7,"a":27,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":56},{"id":177,"name":"John Marino","pos":"D","team":"UTA","g":4,"a":30,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":57},{"id":178,"name":"Aaron Ekblad","pos":"D","team":"FLA","g":7,"a":26,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":58},{"id":179,"name":"Neal Pionk","pos":"D","team":"WPG","g":6,"a":27,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":59},{"id":180,"name":"Justin Faulk","pos":"D","team":"DET","g":10,"a":22,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":60},{"id":181,"name":"Morgan Rielly","pos":"D","team":"TOR","g":6,"a":26,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":61},{"id":182,"name":"Artyom Levshunov","pos":"D","team":"CHI","g":4,"a":28,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":62},{"id":183,"name":"Jake Walman","pos":"D","team":"EDM","g":9,"a":22,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":63},{"id":184,"name":"Vladislav Gavrikov","pos":"D","team":"NYR","g":9,"a":22,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":64},{"id":185,"name":"Brent Burns","pos":"D","team":"COL","g":8,"a":23,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":65},{"id":186,"name":"J.J. Moser","pos":"D","team":"TBL","g":7,"a":24,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":66},{"id":187,"name":"Cam Fowler","pos":"D","team":"STL","g":6,"a":25,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":67},{"id":188,"name":"Jordan Spence","pos":"D","team":"OTT","g":5,"a":25,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":68},{"id":189,"name":"Damon Severson","pos":"D","team":"CBJ","g":9,"a":21,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":69},{"id":190,"name":"Hampus Lindholm","pos":"D","team":"BOS","g":8,"a":22,"ht":0,"w":0,"l":0,"so":0,"source":"Pool Pro","poolProRank":70},{"id":191,"name":"Andrei Vasilevskiy","pos":"G","team":"TBL","g":0,"a":0,"ht":0,"w":41,"l":27.97,"so":5,"source":"Pool Pro","poolProRank":1},{"id":192,"name":"Karel Vejmelka","pos":"G","team":"UTA","g":0,"a":0,"ht":0,"w":40,"l":28.57,"so":3,"source":"Pool Pro","poolProRank":2},{"id":193,"name":"Jake Oettinger","pos":"G","team":"DAL","g":0,"a":0,"ht":0,"w":39,"l":28.66,"so":5,"source":"Pool Pro","poolProRank":3},{"id":194,"name":"Logan Thompson","pos":"G","team":"WSH","g":0,"a":0,"ht":0,"w":35,"l":27.05,"so":4,"source":"Pool Pro","poolProRank":4},{"id":195,"name":"Jeremy Swayman","pos":"G","team":"BOS","g":0,"a":0,"ht":0,"w":32,"l":30.32,"so":3,"source":"Pool Pro","poolProRank":5},{"id":196,"name":"Jacob Markstrom","pos":"G","team":"FLA","g":0,"a":0,"ht":0,"w":30,"l":26.85,"so":2,"source":"Pool Pro","poolProRank":6},{"id":197,"name":"Igor Shesterkin","pos":"G","team":"NYR","g":0,"a":0,"ht":0,"w":30,"l":33.47,"so":3,"source":"Pool Pro","poolProRank":7},{"id":198,"name":"Ilya Sorokin","pos":"G","team":"NYI","g":0,"a":0,"ht":0,"w":29,"l":34.07,"so":5,"source":"Pool Pro","poolProRank":8},{"id":199,"name":"MacKenzie Blackwood","pos":"G","team":"COL","g":0,"a":0,"ht":0,"w":29,"l":8.33,"so":3,"source":"Pool Pro","poolProRank":9},{"id":200,"name":"Brandon Bussi","pos":"G","team":"CAR","g":0,"a":0,"ht":0,"w":28,"l":25.4,"so":2,"source":"Pool Pro","poolProRank":10},{"id":201,"name":"Linus Ullmark","pos":"G","team":"OTT","g":0,"a":0,"ht":0,"w":27,"l":29.63,"so":2,"source":"Pool Pro","poolProRank":11},{"id":202,"name":"Connor Hellebuyck","pos":"G","team":"WPG","g":0,"a":0,"ht":0,"w":27,"l":34.93,"so":1,"source":"Pool Pro","poolProRank":12},{"id":203,"name":"Sergei Bobrovsky","pos":"G","team":"TOR","g":0,"a":0,"ht":0,"w":27,"l":32.39,"so":3,"source":"Pool Pro","poolProRank":13},{"id":204,"name":"Lukas Dostal","pos":"G","team":"ANA","g":0,"a":0,"ht":0,"w":26,"l":28.8,"so":0,"source":"Pool Pro","poolProRank":14},{"id":205,"name":"Jesper Wallstedt","pos":"G","team":"MIN","g":0,"a":0,"ht":0,"w":26,"l":28.68,"so":3,"source":"Pool Pro","poolProRank":15},{"id":206,"name":"Jakub Dobes","pos":"G","team":"MTL","g":0,"a":0,"ht":0,"w":26,"l":29.2,"so":2,"source":"Pool Pro","poolProRank":16},{"id":207,"name":"Dan Vladar","pos":"G","team":"PHI","g":0,"a":0,"ht":0,"w":26,"l":34.39,"so":1,"source":"Pool Pro","poolProRank":17},{"id":208,"name":"Jet Greaves","pos":"G","team":"CBJ","g":0,"a":0,"ht":0,"w":25,"l":33.31,"so":2,"source":"Pool Pro","poolProRank":18},{"id":209,"name":"Joel Hofer","pos":"G","team":"STL","g":0,"a":0,"ht":0,"w":25,"l":34.27,"so":3,"source":"Pool Pro","poolProRank":19},{"id":210,"name":"Frederik Andersen","pos":"G","team":"EDM","g":0,"a":0,"ht":0,"w":25,"l":24.48,"so":0,"source":"Pool Pro","poolProRank":20},{"id":211,"name":"John Gibson","pos":"G","team":"DET","g":0,"a":0,"ht":0,"w":24,"l":33.56,"so":3,"source":"Pool Pro","poolProRank":21},{"id":212,"name":"Ukko-Pekka Luukkonen","pos":"G","team":"BUF","g":0,"a":0,"ht":0,"w":24,"l":28.7,"so":2,"source":"Pool Pro","poolProRank":22},{"id":213,"name":"Arturs Silovs","pos":"G","team":"PIT","g":0,"a":0,"ht":0,"w":24,"l":29.93,"so":1,"source":"Pool Pro","poolProRank":23},{"id":214,"name":"Juuse Saros","pos":"G","team":"NSH","g":0,"a":0,"ht":0,"w":23,"l":33.06,"so":0,"source":"Pool Pro","poolProRank":24},{"id":215,"name":"Yaroslav Askarov","pos":"G","team":"SJS","g":0,"a":0,"ht":0,"w":23,"l":32.17,"so":1,"source":"Pool Pro","poolProRank":25},{"id":216,"name":"Scott Wedgewood","pos":"G","team":"COL","g":0,"a":0,"ht":0,"w":22,"l":24.13,"so":3,"source":"Pool Pro","poolProRank":26},{"id":217,"name":"Pyotr Kochetkov","pos":"G","team":"CAR","g":0,"a":0,"ht":0,"w":22,"l":8.68,"so":2,"source":"Pool Pro","poolProRank":27},{"id":218,"name":"Joey Daccord","pos":"G","team":"SEA","g":0,"a":0,"ht":0,"w":22,"l":36.13,"so":2,"source":"Pool Pro","poolProRank":28},{"id":219,"name":"Carter Hart","pos":"G","team":"VGK","g":0,"a":0,"ht":0,"w":22,"l":27.46,"so":1,"source":"Pool Pro","poolProRank":29},{"id":220,"name":"Jake Allen","pos":"G","team":"NJD","g":0,"a":0,"ht":0,"w":22,"l":33.55,"so":1,"source":"Pool Pro","poolProRank":30},{"id":221,"name":"Spencer Knight","pos":"G","team":"CHI","g":0,"a":0,"ht":0,"w":21,"l":38.38,"so":3,"source":"Pool Pro","poolProRank":31},{"id":222,"name":"Akira Schmid","pos":"G","team":"FLA","g":0,"a":0,"ht":0,"w":21,"l":8.87,"so":1,"source":"Pool Pro","poolProRank":32},{"id":223,"name":"Dustin Wolf","pos":"G","team":"CGY","g":0,"a":0,"ht":0,"w":20,"l":38.15,"so":1,"source":"Pool Pro","poolProRank":33},{"id":224,"name":"Adin Hill","pos":"G","team":"VGK","g":0,"a":0,"ht":0,"w":20,"l":9.61,"so":1,"source":"Pool Pro","poolProRank":34},{"id":225,"name":"Alex Lyon","pos":"G","team":"BUF","g":0,"a":0,"ht":0,"w":20,"l":10.14,"so":3,"source":"Pool Pro","poolProRank":35},{"id":226,"name":"Darcy Kuemper","pos":"G","team":"LAK","g":0,"a":0,"ht":0,"w":18,"l":36.25,"so":2,"source":"Pool Pro","poolProRank":36},{"id":227,"name":"Alex Nedeljkovic","pos":"G","team":"SJS","g":0,"a":0,"ht":0,"w":18,"l":11.08,"so":0,"source":"Pool Pro","poolProRank":37},{"id":228,"name":"Filip Gustavsson","pos":"G","team":"MIN","g":0,"a":0,"ht":0,"w":17,"l":9.44,"so":3,"source":"Pool Pro","poolProRank":38},{"id":229,"name":"Anton Forsberg","pos":"G","team":"LAK","g":0,"a":0,"ht":0,"w":17,"l":41,"so":1,"source":"Pool Pro","poolProRank":39},{"id":230,"name":"Thatcher Demko","pos":"G","team":"VAN","g":0,"a":0,"ht":0,"w":16,"l":37.79,"so":0,"source":"Pool Pro","poolProRank":40},{"id":231,"name":"Tristan Jarry","pos":"G","team":"EDM","g":0,"a":0,"ht":0,"w":16,"l":10.99,"so":0,"source":"Pool Pro","poolProRank":41},{"id":232,"name":"Anthony Stolarz","pos":"G","team":"TOR","g":0,"a":0,"ht":0,"w":16,"l":10.89,"so":1,"source":"Pool Pro","poolProRank":42},{"id":233,"name":"Justus Annunen","pos":"G","team":"NSH","g":0,"a":0,"ht":0,"w":16,"l":42,"so":0,"source":"Pool Pro","poolProRank":43},{"id":234,"name":"David Rittich","pos":"G","team":"NJD","g":0,"a":0,"ht":0,"w":16,"l":42,"so":1,"source":"Pool Pro","poolProRank":44},{"id":235,"name":"Jacob Fowler","pos":"G","team":"MTL","g":0,"a":0,"ht":0,"w":15,"l":9.94,"so":2,"source":"Pool Pro","poolProRank":45},{"id":236,"name":"Joseph Woll","pos":"G","team":"PHI","g":0,"a":0,"ht":0,"w":15,"l":43,"so":1,"source":"Pool Pro","poolProRank":46},{"id":237,"name":"Charlie Lindgren","pos":"G","team":"WSH","g":0,"a":0,"ht":0,"w":15,"l":8.95,"so":0,"source":"Pool Pro","poolProRank":47},{"id":238,"name":"Elvis Merzlikins","pos":"G","team":"CBJ","g":0,"a":0,"ht":0,"w":14,"l":44,"so":0,"source":"Pool Pro","poolProRank":48},{"id":239,"name":"Philipp Grubauer","pos":"G","team":"SEA","g":0,"a":0,"ht":0,"w":14,"l":44,"so":0,"source":"Pool Pro","poolProRank":49},{"id":240,"name":"Jordan Binnington","pos":"G","team":"STL","g":0,"a":0,"ht":0,"w":13,"l":45,"so":1,"source":"Pool Pro","poolProRank":50}];
+const TEAM_PROJECTIONS = [{"code":"COL","name":"Colorado Avalanche","espnRank":2,"puckRank":1,"pts":107.1,"valueGap":1},{"code":"CAR","name":"Carolina Hurricanes","espnRank":1,"puckRank":2,"pts":105.1,"valueGap":-1},{"code":"BUF","name":"Buffalo Sabres","espnRank":5,"puckRank":3,"pts":104.2,"valueGap":2},{"code":"TBL","name":"Tampa Bay Lightning","espnRank":7,"puckRank":4,"pts":103.5,"valueGap":3},{"code":"DAL","name":"Dallas Stars","espnRank":3,"puckRank":5,"pts":103.2,"valueGap":-2},{"code":"MTL","name":"Montréal Canadiens","espnRank":4,"puckRank":6,"pts":101.5,"valueGap":-2},{"code":"MIN","name":"Minnesota Wild","espnRank":8,"puckRank":7,"pts":100.7,"valueGap":1},{"code":"OTT","name":"Ottawa Senators","espnRank":12,"puckRank":8,"pts":100.4,"valueGap":4},{"code":"UTA","name":"Utah Mammoth","espnRank":16,"puckRank":9,"pts":98.8,"valueGap":7},{"code":"BOS","name":"Boston Bruins","espnRank":10,"puckRank":10,"pts":98.6,"valueGap":0},{"code":"PHI","name":"Philadelphia Flyers","espnRank":14,"puckRank":11,"pts":98.2,"valueGap":3},{"code":"WSH","name":"Washington Capitals","espnRank":17,"puckRank":12,"pts":97.5,"valueGap":5},{"code":"PIT","name":"Pittsburgh Penguins","espnRank":11,"puckRank":13,"pts":97.2,"valueGap":-2},{"code":"EDM","name":"Edmonton Oilers","espnRank":13,"puckRank":14,"pts":97.1,"valueGap":-1},{"code":"VGK","name":"Vegas Golden Knights","espnRank":6,"puckRank":15,"pts":96.2,"valueGap":-9},{"code":"CBJ","name":"Columbus Blue Jackets","espnRank":20,"puckRank":16,"pts":95.5,"valueGap":4},{"code":"STL","name":"St. Louis Blues","espnRank":27,"puckRank":17,"pts":94.2,"valueGap":10},{"code":"ANA","name":"Anaheim Ducks","espnRank":15,"puckRank":18,"pts":94.1,"valueGap":-3},{"code":"NYI","name":"New York Islanders","espnRank":19,"puckRank":19,"pts":93.8,"valueGap":0},{"code":"NJD","name":"New Jersey Devils","espnRank":22,"puckRank":20,"pts":93.6,"valueGap":2},{"code":"NSH","name":"Nashville Predators","espnRank":26,"puckRank":21,"pts":93.3,"valueGap":5},{"code":"FLA","name":"Florida Panthers","espnRank":9,"puckRank":22,"pts":91.9,"valueGap":-13},{"code":"DET","name":"Detroit Red Wings","espnRank":18,"puckRank":23,"pts":91.8,"valueGap":-5},{"code":"NYR","name":"New York Rangers","espnRank":29,"puckRank":24,"pts":91.4,"valueGap":5},{"code":"SJS","name":"San Jose Sharks","espnRank":23,"puckRank":25,"pts":90.7,"valueGap":-2},{"code":"LAK","name":"Los Angeles Kings","espnRank":21,"puckRank":26,"pts":90.4,"valueGap":-5},{"code":"WPG","name":"Winnipeg Jets","espnRank":25,"puckRank":27,"pts":89.1,"valueGap":-2},{"code":"CGY","name":"Calgary Flames","espnRank":30,"puckRank":28,"pts":89.1,"valueGap":2},{"code":"SEA","name":"Seattle Kraken","espnRank":28,"puckRank":29,"pts":88.0,"valueGap":-1},{"code":"TOR","name":"Toronto Maple Leafs","espnRank":24,"puckRank":30,"pts":84.5,"valueGap":-6},{"code":"CHI","name":"Chicago Blackhawks","espnRank":31,"puckRank":31,"pts":83.4,"valueGap":0},{"code":"VAN","name":"Vancouver Canucks","espnRank":32,"puckRank":32,"pts":79.6,"valueGap":0}];
 const DEFAULTS = {participants:13,mySlot:7,rounds:14,needA:8,needD:4,needG:2,regWinPct:80,otlPct:20};
 let state = loadState();
 function loadState(){
   try{
     const s=JSON.parse(localStorage.getItem('pool2026draft_v13')||'null');
-    if(s && s.settings && Array.isArray(s.draft)) return s;
+    if(s && s.settings && Array.isArray(s.draft)){
+      if(!Array.isArray(s.teamDraft)) s.teamDraft=[];
+      if(typeof s.teamTurnMode!=='boolean') s.teamTurnMode=false;
+      return s;
+    }
   }catch(e){}
-  return {settings:{...DEFAULTS},draft:[],customPlayers:[],adjustments:{}};
+  return {settings:{...DEFAULTS},draft:[],customPlayers:[],adjustments:{},teamDraft:[],teamTurnMode:false};
 }
 function persist(){ try{localStorage.setItem('pool2026draft_v13',JSON.stringify(state));}catch(e){} }
 function allPlayers(){
@@ -567,6 +655,195 @@ function renderMobilePlayers(){
   }).join('');
 }
 
+
+function teamByCode(code){ return TEAM_PROJECTIONS.find(t=>t.code===code); }
+function chosenTeamCodes(){ return new Set((state.teamDraft||[]).map(x=>x.code)); }
+function currentTeamPickNo(){ return (state.teamDraft||[]).length+1; }
+function myTeamEntry(){ return (state.teamDraft||[]).find(x=>x.mine); }
+
+function projectedPlayerSlotForTeam(code, entries=state.teamDraft){
+  const t=teamByCode(code); if(!t)return null;
+  // OFFICIAL POOL RULE:
+  // ESPN rank 1 = strongest, 32 = weakest.
+  // Among the selected teams, the weakest ESPN-ranked team drafts players first.
+  return 1 + entries.filter(e=>{
+    const et=teamByCode(e.code);
+    return et && et.code!==code && et.espnRank>t.espnRank;
+  }).length;
+}
+
+function futureTeamScenario(code){
+  const n=state.settings.participants;
+  const chosen=state.teamDraft||[];
+  const candidate=teamByCode(code);
+  if(!candidate) return null;
+
+  const future=Math.max(0,n-chosen.length-1);
+  const selectedCodes=new Set(chosen.map(x=>x.code));
+  selectedCodes.add(code);
+  const available=TEAM_PROJECTIONS.filter(t=>!selectedCodes.has(t.code));
+
+  // Final player-draft slot is determined ONLY by ESPN official rank.
+  const worseBefore=chosen.filter(e=>teamByCode(e.code)?.espnRank>candidate.espnRank).length;
+  const betterAvailable=available.filter(t=>t.espnRank<candidate.espnRank).length;
+  const worseAvailable=available.filter(t=>t.espnRank>candidate.espnRank).length;
+
+  // Mathematical possible range.
+  const minimumWorseFuture=Math.max(0,future-betterAvailable);
+  const maximumWorseFuture=Math.min(future,worseAvailable);
+  const minSlot=1+worseBefore+minimumWorseFuture;
+  const maxSlot=1+worseBefore+maximumWorseFuture;
+
+  // "Rang estimé": future participants take the highest PuckCast points available.
+  // This assumption affects only the estimate, never the official final slot.
+  const likelyFuture=available.slice().sort((a,b)=>b.pts-a.pts).slice(0,future);
+  const projectedSlot=1+worseBefore+likelyFuture.filter(t=>t.espnRank>candidate.espnRank).length;
+
+  // Neutral expectation: choices spread proportionally among remaining teams.
+  const neutralSlot=1+worseBefore+(available.length?future*(worseAvailable/available.length):0);
+
+  const dist=Math.abs(projectedSlot-6);
+  let label='HORS CIBLE', cls='teamTargetOut';
+  if(projectedSlot>=5 && projectedSlot<=7){label='EXCELLENT',cls='teamTargetExcellent';}
+  else if((minSlot<=7 && maxSlot>=5) && dist<=2){label='BON',cls='teamTargetGood';}
+  else if(minSlot<=7 && maxSlot>=5){label='POSSIBLE',cls='teamTargetRisk';}
+
+  return {future,minSlot,maxSlot,projectedSlot,neutralSlot,dist,label,cls};
+}
+
+function teamRecommendations(){
+  const chosen=chosenTeamCodes();
+  return TEAM_PROJECTIONS
+    .filter(t=>!chosen.has(t.code))
+    .map(t=>({team:t,calc:futureTeamScenario(t.code)}))
+    .sort((a,b)=>{
+      const aHit=(a.calc.projectedSlot>=5&&a.calc.projectedSlot<=7)?0:1;
+      const bHit=(b.calc.projectedSlot>=5&&b.calc.projectedSlot<=7)?0:1;
+      if(aHit!==bHit)return aHit-bHit;
+      if(a.calc.dist!==b.calc.dist)return a.calc.dist-b.calc.dist;
+      // At a comparable target slot, maximize projected team points.
+      if(b.team.pts!==a.team.pts)return b.team.pts-a.team.pts;
+      // Then prefer teams ESPN appears to undervalue relative to PuckCast.
+      return b.team.valueGap-a.team.valueGap;
+    });
+}
+
+function markTeamChosen(code,mine=false){
+  const n=state.settings.participants;
+  if(state.teamDraft.length>=n){alert('Les '+n+' équipes du pool sont déjà choisies.');return;}
+  if(chosenTeamCodes().has(code)){alert('Cette équipe est déjà choisie.');return;}
+  if(mine && myTeamEntry()){alert('Ton équipe est déjà enregistrée.');return;}
+  state.teamDraft.push({pick:state.teamDraft.length+1,code,mine:!!mine});
+  if(mine) state.teamTurnMode=false;
+  syncPlayerSlotFromTeams();
+  persist(); renderAll();
+}
+
+function activateMyTeamTurn(){
+  if(myTeamEntry()){alert('Ton équipe est déjà enregistrée.');return;}
+  if(state.teamDraft.length>=state.settings.participants){alert('La ronde des équipes est terminée.');return;}
+  state.teamTurnMode=true; persist(); renderTeams();
+  document.getElementById('teamRecommendationsWrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function undoTeamPick(){
+  if(!state.teamDraft.length)return;
+  state.teamDraft.pop();
+  state.teamTurnMode=false;
+  persist(); renderAll();
+}
+
+function resetTeamDraft(){
+  if(confirm('Réinitialiser tous les choix d’équipes?')){
+    state.teamDraft=[]; state.teamTurnMode=false; persist(); renderAll();
+  }
+}
+
+function syncPlayerSlotFromTeams(){
+  const mine=myTeamEntry();
+  if(!mine)return;
+  if(state.teamDraft.length===state.settings.participants){
+    state.settings.mySlot=projectedPlayerSlotForTeam(mine.code,state.teamDraft);
+  }
+}
+
+function renderTeams(){
+  if(!Array.isArray(state.teamDraft)) state.teamDraft=[];
+  const n=state.settings.participants, pick=currentTeamPickNo(), mine=myTeamEntry();
+  const status=document.getElementById('teamStatus');
+  const wrap=document.getElementById('teamRecommendationsWrap');
+  const myBtn=document.getElementById('myTurnBtn');
+
+  if(mine){
+    const team=teamByCode(mine.code);
+    if(state.teamDraft.length===n){
+      const slot=projectedPlayerSlotForTeam(mine.code,state.teamDraft);
+      status.innerHTML=`✅ <b>Ton équipe : ${team.name}</b> (${team.pts.toFixed(1)} pts). Ronde des équipes terminée : selon le classement officiel ESPN, ton rang pour le draft joueurs est <b>#${slot}</b>. L’application a mis à jour « Mon slot » automatiquement.`;
+    }else{
+      const c=futureTeamScenario(mine.code);
+      status.innerHTML=`⭐ <b>Ton équipe : ${team.name}</b> (${team.pts.toFixed(1)} pts). Avec les choix déjà connus, ta position finale ESPN peut encore varier. Plage actuelle estimée : <b>#${c.minSlot} à #${c.maxSlot}</b>.`;
+    }
+    state.teamTurnMode=false;
+  }else if(pick<=n){
+    status.innerHTML=`Choix d’équipe <b>#${pick} sur ${n}</b>. Coche les équipes choisies par les autres. Quand ton nom est appelé, appuie sur <b>⭐ MON TOUR</b>.`;
+  }else{
+    status.innerHTML=`La ronde des équipes est complète.`;
+  }
+
+  myBtn.disabled=!!mine || pick>n;
+  wrap.style.display=state.teamTurnMode&&!mine?'block':'none';
+
+  if(state.teamTurnMode&&!mine){
+    const recs=teamRecommendations().slice(0,8);
+    document.getElementById('teamRecommendations').innerHTML=recs.map((r,i)=>{
+      const t=r.team,c=r.calc;
+      return `<div class="teamCard ${i===0?'best':''}">
+        <div class="row between">
+          <div><div class="teamRank">ESPN officiel #${t.espnRank} · Rang pts PuckCast #${t.puckRank}</div><div class="teamName">${i===0?'⭐ ':''}${t.name}</div></div>
+          <span class="pill ${c.cls}">${c.label}</span>
+        </div>
+        <div style="margin-top:8px"><span class="teamPts">${t.pts.toFixed(1)}</span> <span class="small muted">pts PuckCast</span></div>
+        <div class="small" style="margin-top:5px"><b>Écart de valeur :</b> ${t.valueGap>0?`+${t.valueGap} rangs favorable`:t.valueGap<0?`${t.valueGap} rangs défavorable`:`neutre`}</div>
+        <div class="teamMetricGrid">
+          <div class="metric"><div class="mLabel">RANG EST.</div><div class="mValue">#${c.projectedSlot}</div></div>
+          <div class="metric"><div class="mLabel">PLAGE</div><div class="mValue">#${c.minSlot}-#${c.maxSlot}</div></div>
+          <div class="metric"><div class="mLabel">NEUTRE</div><div class="mValue">#${c.neutralSlot.toFixed(1)}</div></div>
+        </div>
+        <button class="btn good fabPick" onclick="markTeamChosen('${t.code}',true)">CHOISIR ${t.code} POUR MOI</button>
+      </div>`;
+    }).join('');
+  }
+
+  const q=(document.getElementById('teamSearch')?.value||'').toLowerCase();
+  const filter=document.getElementById('teamStatusFilter')?.value||'available';
+  const chosenMap=new Map(state.teamDraft.map(x=>[x.code,x]));
+  let arr=TEAM_PROJECTIONS.slice().sort((a,b)=>a.espnRank-b.espnRank);
+  if(q) arr=arr.filter(t=>(t.name+' '+t.code).toLowerCase().includes(q));
+  if(filter==='available')arr=arr.filter(t=>!chosenMap.has(t.code));
+  if(filter==='chosen')arr=arr.filter(t=>chosenMap.has(t.code));
+
+  document.getElementById('teamGrid').innerHTML=arr.map(t=>{
+    const entry=chosenMap.get(t.code);
+    const mineEntry=entry?.mine;
+    const cls=mineEntry?'mine':entry?'chosen':'';
+    let action='';
+    if(entry){
+      action=`<div class="small" style="margin-top:9px"><b>${mineEntry?'⭐ MON ÉQUIPE':'✓ CHOISIE'}</b> · choix équipe #${entry.pick}</div>`;
+    }else if(state.teamDraft.length<n){
+      action=`<button class="btn secondary fabPick" style="margin-top:9px" onclick="markTeamChosen('${t.code}',false)">✓ ÉQUIPE CHOISIE</button>`;
+    }
+    return `<div class="teamCard ${cls}">
+      <div class="row between">
+        <div><div class="teamRank">ESPN officiel #${t.espnRank} · Rang pts PuckCast #${t.puckRank}</div><div class="teamName">${t.name}</div></div>
+        <span class="pill ${t.espnRank<=8?'pG':t.espnRank>=25?'scarHigh':'scarLow'}">${t.code}</span>
+      </div>
+      <div style="margin-top:8px"><span class="teamPts">${t.pts.toFixed(1)}</span> <span class="small muted">pts PuckCast</span></div>
+      <div class="small muted" style="margin-top:4px">Écart ESPN/PuckCast : ${t.valueGap>0?`+${t.valueGap} favorable`:t.valueGap<0?`${t.valueGap} défavorable`:`0 neutre`}</div>
+      ${action}
+    </div>`;
+  }).join('') || '<div class="note">Aucune équipe correspondant au filtre.</div>';
+}
+
 function renderKpis(){
   const g=currentPickNo(), r=roundFor(g), slot=slotFor(g), next=nextMyPick();
   const vals=[
@@ -712,13 +989,15 @@ document.getElementById('importFile').addEventListener('change',e=>{
 ['searchTop','posTop'].forEach(id=>document.getElementById(id).addEventListener('input',renderTop));
 ['mobileSearch','mobilePos'].forEach(id=>document.getElementById(id).addEventListener('input',renderMobileTop));
 ['searchPlayers','posPlayers','statusPlayers'].forEach(id=>document.getElementById(id).addEventListener('input',renderPlayers));
+['teamSearch','teamStatusFilter'].forEach(id=>document.getElementById(id).addEventListener('input',renderTeams));
 
-function renderAll(){renderKpis();renderRoster();renderScarcity();renderCurrent();renderTop();renderDraft();renderPlayers();renderMobileHero();renderMobileRoster();renderMobileScarcity();renderMobileTop();renderMobileDraft();renderMobilePlayers();}
+function renderAll(){renderKpis();renderRoster();renderScarcity();renderCurrent();renderTop();renderDraft();renderPlayers();renderMobileHero();renderMobileRoster();renderMobileScarcity();renderMobileTop();renderMobileDraft();renderMobilePlayers();renderTeams();}
 loadSettingsForm();renderAll();
 </script>
 
 <div class="bottomNav">
   <button class="active" data-mobile-tab="dash" onclick="showTab('dash')"><span class="ico">🏠</span><span>Accueil</span></button>
+  <button data-mobile-tab="teams" onclick="showTab('teams')"><span class="ico">🏆</span><span>Équipes</span></button>
   <button data-mobile-tab="draft" onclick="showTab('draft')"><span class="ico">📝</span><span>Draft</span></button>
   <button data-mobile-tab="players" onclick="showTab('players')"><span class="ico">🏒</span><span>Joueurs</span></button>
   <button data-mobile-tab="settings" onclick="showTab('settings')"><span class="ico">⚙️</span><span>Réglages</span></button>
